@@ -6,50 +6,18 @@ from time import sleep
 import bs4
 import requests
 
-# Сохраняет обои в папке new.
-download_path = '/home/aitmyrza/Wallhaven/new/'
-os.makedirs(download_path, exist_ok=True)
 
-print("""
-║╦║ ╔╗ ║ ║ ║║ ╔╗ ╗╔ ╔═ ║║
-║║║ ╠╣ ║ ║ ╠╣ ╠╣ ║║ ╠═ ╬║
-╚╩╝ ║║ ╚ ╚ ║║ ║║ ╚╝ ╚═ ║╬
-""")
-
-total_loaded = 0
-general_url_images = 'https://wallhaven.cc/w/'
-
-wallhaven_wallpapers = os.listdir('/home/aitmyrza/Wallhaven/')
-trash_files = os.listdir('/home/aitmyrza/.local/share/Trash/files/')
-wallhaven_wallpapers = [wp[:-4] for wp in wallhaven_wallpapers]
-trash_files = [wp[:-4] for wp in trash_files]
-
-
-def exclude_wallpapers(answer):
-    """Исключает существующие и удаленные обои из загрузки."""
+def exclude_downloaded_wallpapers():
+    """Исключает загруженные обои."""
     with open('excluded_wallpapers.txt', 'r+') as f:
         excluded_wallpapers = f.read().split('\n')
         excluded_num = 0
-        for wallpaper in wallhaven_wallpapers:
-            if wallpaper not in excluded_wallpapers:
+        for wallpaper in wallhaven_new:
+            if wallpaper[:6] not in excluded_wallpapers:
                 f.write(wallpaper + '\n')
                 excluded_num += 1
 
-        if '+' in answer:
-            for wallpaper in trash_files:
-                if wallpaper not in excluded_wallpapers and len(wallpaper) == 6:
-                    f.write(wallpaper + '\n')
-                    excluded_num += 1
-
         print('Исключено:', excluded_num)
-
-
-print('Исключить удаленные обои из загрузок? (+/-)')
-exclude_wallpapers(input())
-
-with open('excluded_wallpapers.txt') as f:
-    """Получает список исключенных обоев."""
-    excluded_wallpapers = f.read().split('\n')
 
 
 def image(soup):
@@ -104,24 +72,46 @@ def download_wallpapers(page):
     print(f'Page {page} is done'.center(30, '-'))
 
 
-download_threads = []
-for i in range(1, 6):
-    download_thread = threading.Thread(target=download_wallpapers, args=[i])
-    download_threads.append(download_thread)
-    download_thread.start()
+if __name__ == '__main__':
+    print("""
+    ║╦║ ╔╗ ║ ║ ║║ ╔╗ ╗╔ ╔═ ║║
+    ║║║ ╠╣ ║ ║ ╠╣ ╠╣ ║║ ╠═ ╬║
+    ╚╩╝ ║║ ╚ ╚ ║║ ║║ ╚╝ ╚═ ║╬
+    """)
 
-# Ожидание завершения всех потоков выполнения.
-for download_thread in download_threads:
-    download_thread.join()
+    # Сохраняет обои в папке new.
+    download_path = '/home/aitmyrza/Wallhaven/new/'
+    os.makedirs(download_path, exist_ok=True)
 
-print(f'\nВсего загружено: {total_loaded}')
+    total_loaded = 0
+    general_url_images = 'https://wallhaven.cc/w/'
 
-wallhaven_wallpapers = os.listdir(download_path)
+    with open('excluded_wallpapers.txt') as f:
+        """Получает список исключенных обоев."""
+        excluded_wallpapers = f.read().split('\n')
 
-for wallpaper in wallhaven_wallpapers:
-    """Добавляет тип к названиям обоев."""
-    img_png = imghdr.what(download_path + wallpaper)
-    if img_png == 'png':
-        os.rename(download_path + wallpaper, download_path + wallpaper + '.png')
-    else:
-        os.rename(download_path + wallpaper, download_path + wallpaper + '.jpg')
+    download_threads = []
+    for i in range(1, 6):
+        download_thread = threading.Thread(target=download_wallpapers, args=[i])
+        download_threads.append(download_thread)
+        download_thread.start()
+
+    # Ожидание завершения всех потоков выполнения.
+    for download_thread in download_threads:
+        download_thread.join()
+
+    print(f'\nВсего загружено: {total_loaded}')
+
+    wallhaven_new = os.listdir(download_path)
+    exclude_downloaded_wallpapers()
+
+    for wallpaper in wallhaven_new:
+        """Добавляет тип к названиям обоев."""
+        if wallpaper.endswith('.jpg') or wallpaper.endswith('.png'):
+            continue
+
+        img_png = imghdr.what(download_path + wallpaper)
+        if img_png == 'png':
+            os.rename(download_path + wallpaper, download_path + wallpaper + '.png')
+        else:
+            os.rename(download_path + wallpaper, download_path + wallpaper + '.jpg')
